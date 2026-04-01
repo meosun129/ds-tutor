@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ["nodejs_18", "python311", "python311Packages.pip"]
+nixPkgs = ["nodejs_18", "python311", "python311Packages.pypdf2"]
 
 [phases.install]
-cmds = ["npm ci", "pip install pypdf --quiet"]
+cmds = ["npm ci"]
 
 [start]
 cmd = "node server.js"

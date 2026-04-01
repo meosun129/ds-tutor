@@ -12,10 +12,10 @@ async function extractPdfText(filePath) {
     const pythonScript = `
 import sys
 try:
-    from pypdf import PdfReader
+    from PyPDF2 import PdfReader
 except ImportError:
     try:
-        from PyPDF2 import PdfReader
+        from pypdf import PdfReader
     except ImportError:
         print('')
         sys.exit(0)
