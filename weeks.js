@@ -154,29 +154,25 @@ router.post(
 
       const filePath = req.file.path
 
-      // PDF 텍스트 추출 (Python 실패 시 빈 문자열 반환)
-      const pdfText = await extractPdfText(filePath)
-
-      // weeks 테이블 pdf_text 업데이트
-      await db.query(
-        'UPDATE weeks SET pdf_text = $1 WHERE id = $2',
-        [pdfText, week.id]
-      )
-
-      // AI 퀴즈 자동생성 (백그라운드 시작 — 응답은 즉시 반환)
+      // 즉시 202 반환 — PDF 추출 + 퀴즈 생성은 모두 백그라운드 처리
       res.status(202).json({
         data: {
           message: 'PDF 업로드 완료. 퀴즈 생성을 시작했어요.',
           week_id: week.id,
           filename: req.file.filename,
-          pdf_text_length: pdfText.length,
         },
       })
 
-      // 응답 후 비동기로 퀴즈 생성
-      generateQuizzes(week.id, pdfText).catch((err) => {
-        console.error('[POST /weeks/:id/upload-pdf] 퀴즈 생성 오류:', err.message)
-      })
+      // 백그라운드: PDF 텍스트 추출 → DB 저장 → 퀴즈 생성
+      ;(async () => {
+        try {
+          const pdfText = await extractPdfText(filePath)
+          await db.query('UPDATE weeks SET pdf_text = $1 WHERE id = $2', [pdfText, week.id])
+          await generateQuizzes(week.id, pdfText)
+        } catch (err) {
+          console.error('[POST /weeks/:id/upload-pdf] 백그라운드 처리 오류:', err.message)
+        }
+      })()
     } catch (err) {
       next(err)
     }

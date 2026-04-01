@@ -528,10 +528,14 @@ async function loadWeekList() {
       label.childNodes[0].textContent = '업로드 중... ';
 
       try {
-        const result = await uploadPdf(weekId, file);
-        const count  = result.quiz_count || result.quizCount || '?';
-        showToast(`AI 퀴즈 ${count}개 생성됨`);
+        await uploadPdf(weekId, file);
+        showToast('PDF 업로드 완료! AI가 퀴즈를 생성 중입니다...');
         await loadWeekList();
+        // 30초 후 퀴즈 생성 완료 가능성이 높으므로 목록 재갱신
+        setTimeout(async () => {
+          await loadWeekList();
+          showToast('퀴즈 관리 버튼을 눌러 생성된 퀴즈를 확인하세요.');
+        }, 30000);
       } catch (err) {
         showToast(err.message);
         label.childNodes[0].textContent = originalText + ' ';
