@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Tutor — 자료구조 튜터링</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ── 로그인 화면 ── -->
+  <div class="auth-screen" id="auth-screen">
+    <div class="auth-box">
+      <div class="auth-logo" aria-hidden="true">DS</div>
+      <h1 class="auth-app-name">DS Tutor</h1>
+      <p class="auth-app-desc">상명대 게임전공 자료구조 튜터링</p>
+
+      <!-- 로그인 / 회원가입 탭 -->
+      <div class="auth-tabs" role="tablist" aria-label="인증 방식 선택">
+        <button class="auth-tab active" id="tab-login"
+                role="tab" aria-selected="true" aria-controls="panel-login">
+          로그인
+        </button>
+        <button class="auth-tab" id="tab-register"
+                role="tab" aria-selected="false" aria-controls="panel-register">
+          회원가입
+        </button>
+      </div>
+
+      <!-- 로그인 패널 -->
+      <div class="auth-panel" id="panel-login" role="tabpanel" aria-labelledby="tab-login">
+        <input class="auth-input" id="login-email"
+               type="email" placeholder="이메일" autocomplete="email">
+        <input class="auth-input" id="login-password"
+               type="password" placeholder="비밀번호" autocomplete="current-password">
+        <p class="auth-error" id="login-error" role="alert" aria-live="assertive"></p>
+        <button class="auth-btn" id="login-submit">로그인</button>
+      </div>
+
+      <!-- 회원가입 패널 -->
+      <div class="auth-panel hidden" id="panel-register" role="tabpanel" aria-labelledby="tab-register">
+        <input class="auth-input" id="register-name"
+               type="text" placeholder="이름" autocomplete="name" maxlength="20">
+        <input class="auth-input" id="register-email"
+               type="email" placeholder="이메일" autocomplete="email">
+        <input class="auth-input" id="register-password"
+               type="password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
+        <div class="auth-role-row" role="group" aria-label="역할 선택">
+          <span class="auth-role-label">역할</span>
+          <label class="auth-role-option">
+            <input type="radio" name="register-role" value="student" checked> 학생
+          </label>
+          <label class="auth-role-option">
+            <input type="radio" name="register-role" value="tutor"> 튜터
+          </label>
+        </div>
+        <p class="auth-error" id="register-error" role="alert" aria-live="assertive"></p>
+        <button class="auth-btn" id="register-submit">회원가입</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 앱 화면 ── -->
+  <div class="app-screen hidden" id="app-screen">
+
+    <!-- ── 헤더 ── -->
+    <header class="app-header" role="banner">
+      <div class="header-inner">
+        <div class="header-brand">
+          <span class="brand-logo" aria-hidden="true">DS</span>
+          <span class="brand-name">DS Tutor</span>
+          <span class="role-badge" id="role-badge"></span>
+        </div>
+        <div class="header-right">
+          <span class="user-name" id="user-name"></span>
+          <button class="logout-btn" id="logout-btn">로그아웃</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── 탭 내비게이션 ── -->
+    <nav class="tab-nav" id="tab-nav" role="tablist" aria-label="메인 탭">
+      <!-- 튜터 탭: JS가 동적으로 주입 -->
+      <!-- 학생 탭: JS가 동적으로 주입 -->
+    </nav>
+
+    <!-- ── 탭 콘텐츠 영역 ── -->
+    <main class="tab-content" id="tab-content" role="main" aria-live="polite" aria-atomic="false">
+    </main>
+
+  </div>
+
+  <!-- ── 토스트 알림 ── -->
+  <div class="toast hidden" id="toast"
+       role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
