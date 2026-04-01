@@ -41,11 +41,14 @@ function isLoggedIn() {
   return !!getToken();
 }
 
-/** JWT 페이로드 디코딩 (atob 방식) */
+/** JWT 페이로드 디코딩 (UTF-8 한글 지원) */
 function decodeToken(token) {
   try {
     const payload = token.split('.')[1];
-    return JSON.parse(atob(payload));
+    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(decodeURIComponent(decoded.split('').map(c =>
+      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join('')));
   } catch {
     return null;
   }

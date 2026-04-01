@@ -29,7 +29,7 @@ try:
 except Exception as e:
     print('')
 `
-    const proc = spawn('python', ['-c', pythonScript, filePath])
+    const proc = spawn('python3', ['-c', pythonScript, filePath])
     let output = ''
     let errOutput = ''
 
@@ -79,9 +79,11 @@ function callOpenRouter(model, messages) {
       res.on('data', (chunk) => { data += chunk })
       res.on('end', () => {
         try {
-          resolve(JSON.parse(data))
+          const parsed = JSON.parse(data)
+          if (parsed.error) console.error('[ai.js] OpenRouter 에러:', JSON.stringify(parsed.error))
+          resolve(parsed)
         } catch (e) {
-          reject(new Error('OpenRouter 응답 파싱 실패: ' + data.slice(0, 200)))
+          reject(new Error('OpenRouter 응답 파싱 실패: ' + data.slice(0, 300)))
         }
       })
     })
