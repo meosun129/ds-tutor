@@ -4,8 +4,14 @@ const pdfParse = require('pdf-parse')
 const db = require('./db')
 require('dotenv').config()
 
-const OPENROUTER_MODEL = 'deepseek/deepseek-r1-distill-qwen-32b:free'
-const FALLBACK_MODEL = 'deepseek/deepseek-r1:free'
+const FREE_MODELS = [
+  'qwen/qwen3-8b:free',
+  'google/gemma-2-9b-it:free',
+  'microsoft/phi-4:free',
+  'mistralai/mistral-small-3.2-24b-instruct:free',
+  'meta-llama/llama-3.2-3b-instruct:free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
+]
 
 // ── PDF 텍스트 추출 (pdf-parse, Node.js 전용) ─────────────────
 async function extractPdfText(filePath) {
@@ -152,22 +158,23 @@ ${context}
 
   let rawContent = null
 
-  // 1차 시도: 메인 모델
-  try {
-    const result = await callOpenRouter(OPENROUTER_MODEL, messages)
-    rawContent = result?.choices?.[0]?.message?.content
-    if (!rawContent) throw new Error('응답 content 없음')
-  } catch (err) {
-    console.warn(`[ai.js] 메인 모델(${OPENROUTER_MODEL}) 실패:`, err.message)
-    // 2차 시도: fallback 모델
+  // 사용 가능한 모델을 순서대로 시도
+  for (const model of FREE_MODELS) {
     try {
-      const result = await callOpenRouter(FALLBACK_MODEL, messages)
-      rawContent = result?.choices?.[0]?.message?.content
-      if (!rawContent) throw new Error('fallback 응답 content 없음')
-    } catch (fallbackErr) {
-      console.error('[ai.js] Fallback 모델도 실패:', fallbackErr.message)
-      return []
+      const result = await callOpenRouter(model, messages)
+      const content = result?.choices?.[0]?.message?.content
+      if (!content) throw new Error('응답 content 없음')
+      console.log(`[ai.js] 모델 성공: ${model}`)
+      rawContent = content
+      break
+    } catch (err) {
+      console.warn(`[ai.js] 모델 실패(${model}):`, err.message)
     }
+  }
+
+  if (!rawContent) {
+    console.error('[ai.js] 모든 모델 실패 — 퀴즈 생성 불가')
+    return []
   }
 
   // JSON 파싱
