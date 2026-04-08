@@ -1104,11 +1104,19 @@ function renderCurrentQuiz() {
       <button class="submit-btn" id="submit-multiple">제출</button>
     `;
   } else if (quiz.type === 'code_trace') {
+    let ctChoices = quiz.choices_json;
+    if (typeof ctChoices === 'string') {
+      try { ctChoices = JSON.parse(ctChoices); } catch { ctChoices = []; }
+    }
+    const circleNums = ['①', '②', '③', '④'];
     questionBodyHtml = `
-      <pre class="code-block">${escapeHtml(quiz.code || quiz.question)}</pre>
-      <div class="code-trace-input-area">
-        <label class="code-trace-label">실행 결과를 입력하세요:</label>
-        <input type="text" class="code-trace-input" id="code-trace-answer" placeholder="예: 5 또는 NULL" />
+      <div class="multiple-choices">
+        ${(ctChoices || []).map((c, i) => `
+          <label class="choice-label">
+            <input type="radio" name="quiz-choice" value="${circleNums[i] || (i + 1)}" class="choice-radio" />
+            <span class="choice-text">${c}</span>
+          </label>
+        `).join('')}
       </div>
       <button class="submit-btn" id="submit-code-trace">제출</button>
     `;
@@ -1156,9 +1164,9 @@ function renderCurrentQuiz() {
         await handleQuizSubmit(quiz, checked.value);
       }
       if (submitCt) {
-        const val = document.getElementById('code-trace-answer')?.value.trim();
-        if (!val) { showToast('실행 결과를 입력해주세요.'); return; }
-        await handleQuizSubmit(quiz, val);
+        const checked = document.querySelector('input[name="quiz-choice"]:checked');
+        if (!checked) { showToast('보기를 선택해주세요.'); return; }
+        await handleQuizSubmit(quiz, checked.value);
       }
     });
   }
