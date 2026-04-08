@@ -110,20 +110,40 @@ function parseQuizJson(text) {
 
 // ── 퀴즈 생성 및 DB 저장 ─────────────────────────────────────
 async function generateQuizzes(weekId, pdfText) {
+  // 기존 퀴즈 조회 — 중복 방지용
+  const { rows: existingQuizzes } = await db.query(
+    'SELECT question FROM quizzes WHERE week_id = $1',
+    [weekId]
+  )
+
+  // 기존 퀴즈 수에 따라 PDF 다른 구간 사용 (다양성 확보)
+  const chunkSize = 3000
+  const offset = existingQuizzes.length > 0
+    ? Math.min(existingQuizzes.length * 800, Math.max(0, (pdfText || '').length - chunkSize))
+    : 0
   const context = pdfText
-    ? pdfText.slice(0, 3000) // 토큰 절약을 위해 앞 3000자만 사용
+    ? pdfText.slice(offset, offset + chunkSize)
     : '자료구조 C언어 수업 내용 (스택, 큐, 연결 리스트, 포인터 등)'
+
+  const existingBlock = existingQuizzes.length > 0
+    ? `\n【이미 출제된 문제 — 유사한 문제는 절대 출제 금지】\n${existingQuizzes.map((q, i) => `${i + 1}. ${q.question.slice(0, 120)}`).join('\n')}\n`
+    : ''
 
   const prompt = `당신은 자료구조 C언어 강의 퀴즈 출제 전문가입니다.
 아래 강의 내용을 바탕으로 퀴즈 3개를 JSON 배열로 생성해주세요.
-
+${existingBlock}
 강의 내용:
 ${context}
 
 출제 규칙:
 1. ox 타입 1개: question(문장), answer("O" 또는 "X"), explanation(해설)
 2. multiple 타입 1개: question, choices_json(["①...", "②...", "③...", "④..."] 형식 JSON 문자열), answer("①"~"④" 중 하나), explanation
-3. code_trace 타입 1개: question(C코드 포함 "다음 코드의 출력값은?" 형식), choices_json(["①...", "②...", "③...", "④..."] 형식 JSON 문자열), answer("①"~"④" 중 하나), explanation
+3. code_trace 타입 1개 (중요 — 아래 지침 준수):
+   - 변수 2~4개, printf 1회만 사용하는 매우 간단한 C 코드를 직접 작성하세요
+   - 코드를 한 줄씩 실행하며 변수 값을 단계적으로 추적한 뒤 최종 출력값을 확정하세요
+   - answer는 추적 결과와 정확히 일치하는 선택지여야 합니다
+   - choices_json의 오답 3개는 흔한 실수 결과값으로 구성하세요
+   - explanation에 단계별 추적 과정을 포함하세요
 
 반드시 아래 JSON 배열 형식으로만 응답하세요 (다른 텍스트 없이):
 [
@@ -143,10 +163,10 @@ ${context}
   },
   {
     "type": "code_trace",
-    "question": "다음 코드의 출력값은?\\n[c코드]\\n...",
+    "question": "다음 코드의 출력값은?\\n\\n```c\\n...\\n```",
     "choices_json": "[\"① ...\", \"② ...\", \"③ ...\", \"④ ...\"]",
     "answer": "①",
-    "explanation": "..."
+    "explanation": "단계별 추적: ..."
   }
 ]`
 
