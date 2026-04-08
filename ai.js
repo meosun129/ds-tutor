@@ -110,6 +110,13 @@ function parseQuizJson(text) {
 
 // ── 퀴즈 생성 및 DB 저장 ─────────────────────────────────────
 async function generateQuizzes(weekId, pdfText) {
+  // PDF 텍스트 추출 결과 로그
+  console.log(`[ai.js] PDF 텍스트 길이: ${(pdfText || '').length}자 (weekId=${weekId})`)
+  if (!pdfText || pdfText.trim().length < 50) {
+    console.warn(`[ai.js] PDF 텍스트가 너무 짧거나 비어있어 퀴즈 생성을 건너뜁니다 (weekId=${weekId})`)
+    return []
+  }
+
   // 기존 퀴즈 조회 — 중복 방지용
   const { rows: existingQuizzes } = await db.query(
     'SELECT question FROM quizzes WHERE week_id = $1',
@@ -119,20 +126,20 @@ async function generateQuizzes(weekId, pdfText) {
   // 기존 퀴즈 수에 따라 PDF 다른 구간 사용 (다양성 확보)
   const chunkSize = 3000
   const offset = existingQuizzes.length > 0
-    ? Math.min(existingQuizzes.length * 800, Math.max(0, (pdfText || '').length - chunkSize))
+    ? Math.min(existingQuizzes.length * 800, Math.max(0, pdfText.length - chunkSize))
     : 0
-  const context = pdfText
-    ? pdfText.slice(offset, offset + chunkSize)
-    : '자료구조 C언어 수업 내용 (스택, 큐, 연결 리스트, 포인터 등)'
+  const context = pdfText.slice(offset, offset + chunkSize)
+  console.log(`[ai.js] 사용 구간: ${offset}~${offset + chunkSize}자`)
 
   const existingBlock = existingQuizzes.length > 0
     ? `\n【이미 출제된 문제 — 유사한 문제는 절대 출제 금지】\n${existingQuizzes.map((q, i) => `${i + 1}. ${q.question.slice(0, 120)}`).join('\n')}\n`
     : ''
 
   const prompt = `당신은 자료구조 C언어 강의 퀴즈 출제 전문가입니다.
-아래 강의 내용을 바탕으로 퀴즈 3개를 JSON 배열로 생성해주세요.
+반드시 아래 【강의 내용】에 등장하는 개념, 용어, 예제만을 사용하여 퀴즈를 출제하세요.
+강의 내용에 없는 내용은 절대 출제하지 마세요.
 ${existingBlock}
-강의 내용:
+【강의 내용】:
 ${context}
 
 출제 규칙:
