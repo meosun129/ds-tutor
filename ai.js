@@ -1,54 +1,24 @@
-const { spawn } = require('child_process')
 const https = require('https')
+const fs = require('fs')
+const pdfParse = require('pdf-parse')
 const db = require('./db')
 require('dotenv').config()
 
 const OPENROUTER_MODEL = 'nvidia/nemotron-3-super-120b-a12b:free'
 const FALLBACK_MODEL = 'mistralai/mistral-7b-instruct:free'
 
-// ── PDF 텍스트 추출 (Python pypdf) ───────────────────────────
+// ── PDF 텍스트 추출 (pdf-parse, Node.js 전용) ─────────────────
 async function extractPdfText(filePath) {
-  return new Promise((resolve) => {
-    const pythonScript = `
-import sys
-try:
-    from PyPDF2 import PdfReader
-except ImportError:
-    try:
-        from pypdf import PdfReader
-    except ImportError:
-        print('')
-        sys.exit(0)
-
-try:
-    reader = PdfReader(sys.argv[1])
-    text = ''
-    for page in reader.pages:
-        text += page.extract_text() or ''
-    print(text)
-except Exception as e:
-    print('')
-`
-    const proc = spawn('python3', ['-c', pythonScript, filePath])
-    let output = ''
-    let errOutput = ''
-
-    proc.stdout.on('data', (chunk) => { output += chunk.toString() })
-    proc.stderr.on('data', (chunk) => { errOutput += chunk.toString() })
-
-    proc.on('close', (code) => {
-      if (errOutput) {
-        console.error('[ai.js] Python stderr:', errOutput.trim())
-      }
-      // 실패하거나 빈 결과여도 graceful degradation — 빈 문자열 반환
-      resolve(output.trim())
-    })
-
-    proc.on('error', (err) => {
-      console.error('[ai.js] Python spawn 오류:', err.message)
-      resolve('')
-    })
-  })
+  try {
+    const buffer = fs.readFileSync(filePath)
+    const data = await pdfParse(buffer)
+    const text = data.text || ''
+    console.log(`[ai.js] PDF 추출 완료: ${text.length}자 (${filePath})`)
+    return text.trim()
+  } catch (err) {
+    console.error('[ai.js] PDF 추출 오류:', err.message)
+    return ''
+  }
 }
 
 // ── OpenRouter API 호출 헬퍼 ─────────────────────────────────
