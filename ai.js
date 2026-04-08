@@ -163,7 +163,7 @@ ${context}
   },
   {
     "type": "code_trace",
-    "question": "다음 코드의 출력값은?\\n\\n```c\\n...\\n```",
+    "question": "다음 코드의 출력값은?\\n\\n[C코드]\\n...",
     "choices_json": "[\"① ...\", \"② ...\", \"③ ...\", \"④ ...\"]",
     "answer": "①",
     "explanation": "단계별 추적: ..."
