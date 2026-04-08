@@ -170,12 +170,20 @@ router.post(
           const texts = await Promise.all(files.map((f) => extractPdfText(f.path)))
           const newText = texts.filter(Boolean).join('\n\n')
 
-          // 기존 pdf_text에 누적 (append)
+          // 업로드된 파일 메타 (원본명 + 저장명 + 시각)
+          const newFileMeta = files.map((f) => ({
+            original: f.originalname,
+            stored: f.filename,
+            uploadedAt: new Date().toISOString(),
+          }))
+
+          // 기존 pdf_text, pdf_files에 누적 (append)
           await db.query(
             `UPDATE weeks
-             SET pdf_text = CASE WHEN pdf_text IS NULL OR pdf_text = '' THEN $1 ELSE pdf_text || E'\\n\\n' || $1 END
-             WHERE id = $2`,
-            [newText, week.id]
+             SET pdf_text  = CASE WHEN pdf_text IS NULL OR pdf_text = '' THEN $1 ELSE pdf_text || E'\\n\\n' || $1 END,
+                 pdf_files = COALESCE(pdf_files, '[]'::jsonb) || $2::jsonb
+             WHERE id = $3`,
+            [newText, JSON.stringify(newFileMeta), week.id]
           )
 
           // 누적된 전체 텍스트로 퀴즈 생성

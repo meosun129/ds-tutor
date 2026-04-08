@@ -493,14 +493,27 @@ async function loadWeekList() {
       return;
     }
 
-    listEl.innerHTML = weeks.map(w => `
+    listEl.innerHTML = weeks.map(w => {
+      let pdfFiles = [];
+      try { pdfFiles = JSON.parse(w.pdf_files || '[]'); } catch {}
+      const pdfListHtml = pdfFiles.length > 0
+        ? `<ul class="pdf-file-list">
+            ${pdfFiles.map(f => `
+              <li class="pdf-file-item">
+                <span class="pdf-file-icon">📄</span>
+                <span class="pdf-file-name">${escapeHtml(f.original)}</span>
+                <span class="pdf-file-date">${new Date(f.uploadedAt).toLocaleDateString('ko-KR')}</span>
+              </li>`).join('')}
+           </ul>`
+        : '';
+      return `
       <div class="week-card" data-week-id="${w.id}">
         <div class="week-header">
           <div class="week-info">
             <span class="week-badge">${w.week_no}주차</span>
             <span class="week-title">${w.title}</span>
             <span class="week-pdf-status ${w.pdf_text ? 'has-pdf' : 'no-pdf'}">
-              ${w.pdf_text ? 'PDF 있음' : 'PDF 없음'}
+              ${pdfFiles.length > 0 ? `PDF ${pdfFiles.length}개` : 'PDF 없음'}
             </span>
           </div>
           <div class="week-actions">
@@ -511,9 +524,10 @@ async function loadWeekList() {
             <button class="action-btn secondary quiz-manage-btn" data-week-id="${w.id}">퀴즈 관리</button>
           </div>
         </div>
+        ${pdfListHtml}
         <div class="quiz-panel hidden" id="quiz-panel-${w.id}"></div>
       </div>
-    `).join('');
+    `}).join('');
 
     // PDF 업로드 이벤트 위임
     listEl.addEventListener('change', async (e) => {

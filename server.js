@@ -46,8 +46,10 @@ app.use('/sessions', sessionsRouter)
       week_no    INT UNIQUE NOT NULL,
       title      VARCHAR NOT NULL,
       pdf_text   TEXT,
+      pdf_files  JSONB DEFAULT '[]',
       created_at TIMESTAMP DEFAULT NOW()
     )`,
+    `ALTER TABLE weeks ADD COLUMN IF NOT EXISTS pdf_files JSONB DEFAULT '[]'`,
 
     // quizzes: OX / 객관식 / 코드추적 퀴즈
     `CREATE TABLE IF NOT EXISTS quizzes (
