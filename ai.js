@@ -4,8 +4,8 @@ const pdfParse = require('pdf-parse')
 const db = require('./db')
 require('dotenv').config()
 
-const OPENROUTER_MODEL = 'nvidia/nemotron-3-super-120b-a12b:free'
-const FALLBACK_MODEL = 'mistralai/mistral-7b-instruct:free'
+const OPENROUTER_MODEL = 'google/gemma-3-27b-it:free'
+const FALLBACK_MODEL = 'meta-llama/llama-3.1-8b-instruct:free'
 
 // ── PDF 텍스트 추출 (pdf-parse, Node.js 전용) ─────────────────
 async function extractPdfText(filePath) {
@@ -27,8 +27,8 @@ function callOpenRouter(model, messages) {
     const body = JSON.stringify({
       model,
       messages,
-      temperature: 0.7,
-      max_tokens: 2048,
+      temperature: 0.3,
+      max_tokens: 4096,
     })
 
     const options = {
