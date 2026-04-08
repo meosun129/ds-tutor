@@ -4,8 +4,8 @@ const pdfParse = require('pdf-parse')
 const db = require('./db')
 require('dotenv').config()
 
-const OPENROUTER_MODEL = 'google/gemma-3-27b-it:free'
-const FALLBACK_MODEL = 'meta-llama/llama-3.1-8b-instruct:free'
+const OPENROUTER_MODEL = 'deepseek/deepseek-r1-distill-qwen-32b:free'
+const FALLBACK_MODEL = 'deepseek/deepseek-r1:free'
 
 // ── PDF 텍스트 추출 (pdf-parse, Node.js 전용) ─────────────────
 async function extractPdfText(filePath) {
