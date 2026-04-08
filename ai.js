@@ -113,14 +113,15 @@ ${existingBlock}
 ${context}
 
 출제 규칙:
-1. ox 타입 1개: question(문장), answer("O" 또는 "X"), explanation(해설)
-2. multiple 타입 1개: question, choices_json(["①...", "②...", "③...", "④..."] 형식 JSON 문자열), answer("①"~"④" 중 하나), explanation
+1. ox 타입 1개: question(문장), answer("O" 또는 "X"), explanation(해설), choices는 null
+2. multiple 타입 1개: question, choices(["① ...", "② ...", "③ ...", "④ ..."] 배열), answer("①"~"④" 중 하나), explanation
 3. code_trace 타입 1개 (중요 — 아래 지침 준수):
    - 변수 2~4개, printf 1회만 사용하는 매우 간단한 C 코드를 직접 작성하세요
    - 코드를 한 줄씩 실행하며 변수 값을 단계적으로 추적한 뒤 최종 출력값을 확정하세요
    - answer는 추적 결과와 정확히 일치하는 선택지여야 합니다
-   - choices_json의 오답 3개는 흔한 실수 결과값으로 구성하세요
+   - choices의 오답 3개는 흔한 실수 결과값으로 구성하세요
    - explanation에 단계별 추적 과정을 포함하세요
+   - choices는 ["① ...", "② ...", "③ ...", "④ ..."] 배열 형식
 
 반드시 아래 JSON 배열 형식으로만 응답하세요 (다른 텍스트 없이):
 [
@@ -134,14 +135,14 @@ ${context}
   {
     "type": "multiple",
     "question": "...",
-    "choices_json": "[\"① ...\", \"② ...\", \"③ ...\", \"④ ...\"]",
+    "choices": ["① ...", "② ...", "③ ...", "④ ..."],
     "answer": "①",
     "explanation": "..."
   },
   {
     "type": "code_trace",
     "question": "다음 코드의 출력값은?\\n\\n[C코드]\\n...",
-    "choices_json": "[\"① ...\", \"② ...\", \"③ ...\", \"④ ...\"]",
+    "choices": ["① ...", "② ...", "③ ...", "④ ..."],
     "answer": "①",
     "explanation": "단계별 추적: ..."
   }
@@ -194,8 +195,10 @@ ${context}
         continue
       }
 
-      const choicesJson = q.choices_json
-        ? (typeof q.choices_json === 'string' ? q.choices_json : JSON.stringify(q.choices_json))
+      // AI가 choices(배열) 또는 choices_json(문자열/배열) 형태로 줄 수 있음
+      const rawChoices = q.choices || q.choices_json || null
+      const choicesJson = rawChoices
+        ? (typeof rawChoices === 'string' ? rawChoices : JSON.stringify(rawChoices))
         : null
 
       const { rows } = await db.query(
