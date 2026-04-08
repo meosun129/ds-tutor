@@ -27,7 +27,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 파일당 10MB
   fileFilter: (_req, file, cb) => {
     if (path.extname(file.originalname).toLowerCase() !== '.pdf') {
       return cb(new Error('PDF 파일만 업로드할 수 있어요'))
@@ -120,16 +120,19 @@ router.put('/:id', authenticateToken, requireTutor, async (req, res, next) => {
   }
 })
 
-// POST /weeks/:id/upload-pdf — PDF 업로드 및 AI 퀴즈 자동생성 (tutor 전용)
+// POST /weeks/:id/upload-pdf — PDF 업로드 및 AI 퀴즈 자동생성 (tutor 전용, 복수 파일 지원)
 router.post(
   '/:id/upload-pdf',
   authenticateToken,
   requireTutor,
   (req, res, next) => {
-    upload.single('pdf')(req, res, (err) => {
+    upload.array('pdf', 10)(req, res, (err) => {
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({ error: 'PDF 파일 크기는 10MB 이하여야 해요' })
+          return res.status(400).json({ error: 'PDF 파일 크기는 파일당 10MB 이하여야 해요' })
+        }
+        if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+          return res.status(400).json({ error: 'PDF는 최대 10개까지 업로드할 수 있어요' })
         }
         return res.status(400).json({ error: '파일 업로드 오류: ' + err.message })
       }
@@ -141,34 +144,44 @@ router.post(
   },
   async (req, res, next) => {
     try {
-      if (!req.file) {
+      const files = req.files || []
+      if (files.length === 0) {
         return res.status(400).json({ error: 'PDF 파일을 첨부해주세요' })
       }
 
       const week = await getWeekById(req.params.id)
       if (!week) {
-        // 업로드된 파일 정리
-        fs.unlink(req.file.path, () => {})
+        files.forEach((f) => fs.unlink(f.path, () => {}))
         return res.status(404).json({ error: '주차를 찾을 수 없어요' })
       }
 
-      const filePath = req.file.path
-
-      // 즉시 202 반환 — PDF 추출 + 퀴즈 생성은 모두 백그라운드 처리
+      // 즉시 202 반환 — 추출 + 퀴즈 생성은 백그라운드 처리
       res.status(202).json({
         data: {
-          message: 'PDF 업로드 완료. 퀴즈 생성을 시작했어요.',
+          message: `PDF ${files.length}개 업로드 완료. 퀴즈 생성을 시작했어요.`,
           week_id: week.id,
-          filename: req.file.filename,
+          filenames: files.map((f) => f.filename),
         },
       })
 
-      // 백그라운드: PDF 텍스트 추출 → DB 저장 → 퀴즈 생성
+      // 백그라운드: 각 PDF 텍스트 추출 → 기존 텍스트에 누적 → 퀴즈 생성
       ;(async () => {
         try {
-          const pdfText = await extractPdfText(filePath)
-          await db.query('UPDATE weeks SET pdf_text = $1 WHERE id = $2', [pdfText, week.id])
-          await generateQuizzes(week.id, pdfText)
+          const texts = await Promise.all(files.map((f) => extractPdfText(f.path)))
+          const newText = texts.filter(Boolean).join('\n\n')
+
+          // 기존 pdf_text에 누적 (append)
+          await db.query(
+            `UPDATE weeks
+             SET pdf_text = CASE WHEN pdf_text IS NULL OR pdf_text = '' THEN $1 ELSE pdf_text || E'\\n\\n' || $1 END
+             WHERE id = $2`,
+            [newText, week.id]
+          )
+
+          // 누적된 전체 텍스트로 퀴즈 생성
+          const { rows } = await db.query('SELECT pdf_text FROM weeks WHERE id = $1', [week.id])
+          const fullText = rows[0]?.pdf_text || newText
+          await generateQuizzes(week.id, fullText)
         } catch (err) {
           console.error('[POST /weeks/:id/upload-pdf] 백그라운드 처리 오류:', err.message)
         }

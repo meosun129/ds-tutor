@@ -338,9 +338,9 @@ async function createWeek(weekNo, title) {
   return data.data || data;
 }
 
-async function uploadPdf(weekId, file) {
+async function uploadPdf(weekId, files) {
   const formData = new FormData();
-  formData.append('pdf', file);
+  Array.from(files).forEach((file) => formData.append('pdf', file));
   const res = await fetch(`${API}/weeks/${weekId}/upload-pdf`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${getToken()}` },
@@ -506,7 +506,7 @@ async function loadWeekList() {
           <div class="week-actions">
             <label class="upload-btn" title="PDF 업로드">
               PDF 업로드
-              <input type="file" accept="application/pdf" class="pdf-file-input visually-hidden" data-week-id="${w.id}" />
+              <input type="file" accept="application/pdf" multiple class="pdf-file-input visually-hidden" data-week-id="${w.id}" />
             </label>
             <button class="action-btn secondary quiz-manage-btn" data-week-id="${w.id}">퀴즈 관리</button>
           </div>
@@ -520,16 +520,16 @@ async function loadWeekList() {
       const input = e.target.closest('.pdf-file-input');
       if (!input) return;
       const weekId = input.dataset.weekId;
-      const file   = input.files[0];
-      if (!file) return;
+      const files  = input.files;
+      if (!files || files.length === 0) return;
 
       const label = input.closest('.upload-btn');
       const originalText = label.childNodes[0].textContent.trim();
       label.childNodes[0].textContent = '업로드 중... ';
 
       try {
-        await uploadPdf(weekId, file);
-        showToast('PDF 업로드 완료! AI가 퀴즈를 생성 중입니다...');
+        await uploadPdf(weekId, files);
+        showToast(`PDF ${files.length}개 업로드 완료! AI가 퀴즈를 생성 중입니다...`);
         await loadWeekList();
         // 30초 후 퀴즈 생성 완료 가능성이 높으므로 목록 재갱신
         setTimeout(async () => {
